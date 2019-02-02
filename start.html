@@ -1,0 +1,404 @@
+<!doctype html>
+<html>
+  <head>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/materialize/1.0.0/css/materialize.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment.min.js" integrity="sha256-4iQZ6BVL4qNKlQ27TExEhBN1HFPvAvAMbFavKKosSWQ=" crossorigin="anonymous"></script>
+    <script>
+      const OWM_KEY = '89d8a4220a92f63c5ca8c530efc269ae';
+      const HERE_APP_ID = '2xlmqk5YFz1U4lnRMIYR';
+      const HERE_APP_KEY = 'TN_5lorGnmIBSu03zaB3FA';
+      const CRYPTOCOMPARE_API_KEY = 'ccb51189bac0867cddc5c78c727903492cad1349e8b7cfb2931c86e343c1358c';
+      
+      function refresh() {
+        currentWeatherFetch();
+        forecastWeatherFetch();
+        trafficFetch();
+        newsFetch();
+        politicsFetch();
+        cryptoFetch();
+        dateRefresh();
+      }
+      
+      async function currentWeatherFetch() {
+        let response = await fetch(`https://api.openweathermap.org/data/2.5/weather?zip=92882,us&units=imperial&APPID=${OWM_KEY}`);
+        let body = await response.json();
+        
+        document.querySelector('#weather-temperature').innerText = Math.floor(body.main.temp);
+        document.querySelector('#weather-high').innerText = Math.floor(body.main.temp_max);
+        document.querySelector('#weather-low').innerText = Math.floor(body.main.temp_min);
+        
+        let weather = body.weather[0];
+        document.querySelector('#weather-text').innerText = weather.main;
+        
+        let weatherIcon = document.querySelector('#weather-icon');
+        if (weather.icon.startsWith('01')) {
+          weatherIcon.src = 'assets/weather/040-sunrise.png';
+        } else if (weather.icon.startsWith('02')) {
+          weatherIcon.src = 'assets/weather/038-cloudy-3.png';
+        } else if (weather.icon.startsWith('03')) {
+          weatherIcon.src = 'assets/weather/001-cloud.png';
+        } else if (weather.icon.startsWith('04')) {
+          weatherIcon.src = 'assets/weather/011-cloudy.png';
+        } else if (weather.icon.startsWith('09')) {
+          weatherIcon.src = 'assets/weather/004-rainy-1.png';
+        } else if (weather.icon.startsWith('10')) {
+          weatherIcon.src = 'assets/weather/003-rainy.png';
+        } else if (weather.icon.startsWith('11')) {
+          weatherIcon.src = 'assets/weather/013-storm-2.png';
+        } else if (weather.icon.startsWith('13')) {
+          weatherIcon.src = 'assets/weather/006-snowy.png';
+        } else if (weather.icon.startsWith('50')) {
+          weatherIcon.src = 'assets/weather/017-foog.png';
+        }
+      }
+      
+      async function forecastWeatherFetch() {
+        let response = await fetch(`https://api.openweathermap.org/data/2.5/forecast?zip=92882&units=imperial&APPID=${OWM_KEY}`);
+        let body = await response.json();
+        
+        let weatherData = [];
+        for (let i = 0; i < body.list.length; i++) {
+          let currentDate = new Date(body.list[i].dt * 1000);
+          let previousDate = (weatherData.length > 0) ? new Date(weatherData[weatherData.length - 1].dt * 1000) : new Date();
+          
+          if (currentDate.getDay() != previousDate.getDay() && currentDate.getHours() >= 4) {
+            weatherData.push(body.list[i]);
+          }
+        }
+
+        for (let i = 0; i < 4; i++) {
+          let data = weatherData[i];
+          document.querySelector(`#forecast-day-${i + 1}`).innerText = new Date(data.dt * 1000).toLocaleString('en-us', {weekday: 'long'});
+          document.querySelector(`#forecast-high-${i + 1}`).innerText = Math.floor(data.main.temp_max);
+          document.querySelector(`#forecast-low-${i + 1}`).innerText = Math.floor(data.main.temp_min);
+          
+          let weather = data.weather[0];
+          document.querySelector(`#forecast-text-${i + 1}`).innerText = weather.main;
+          
+          let weatherIcon = document.querySelector(`#forecast-icon-${i + 1}`);
+          if (weather.icon.startsWith('01')) {
+            weatherIcon.src = 'assets/weather/040-sunrise.png';
+          } else if (weather.icon.startsWith('02')) {
+            weatherIcon.src = 'assets/weather/038-cloudy-3.png';
+          } else if (weather.icon.startsWith('03')) {
+            weatherIcon.src = 'assets/weather/001-cloud.png';
+          } else if (weather.icon.startsWith('04')) {
+            weatherIcon.src = 'assets/weather/011-cloudy.png';
+          } else if (weather.icon.startsWith('09')) {
+            weatherIcon.src = 'assets/weather/004-rainy-1.png';
+          } else if (weather.icon.startsWith('10')) {
+            weatherIcon.src = 'assets/weather/003-rainy.png';
+          } else if (weather.icon.startsWith('11')) {
+            weatherIcon.src = 'assets/weather/013-storm-2.png';
+          } else if (weather.icon.startsWith('13')) {
+            weatherIcon.src = 'assets/weather/006-snowy.png';
+          } else if (weather.icon.startsWith('50')) {
+            weatherIcon.src = 'assets/weather/017-foog.png';
+          }
+        }
+        
+        console.log(weatherData);
+      }
+      
+      async function trafficFetch() {
+        let response = await fetch(
+          `https://route.api.here.com/routing/7.2/calculateroute.json` +
+          `?app_id=${HERE_APP_ID}` +
+          `&app_code=${HERE_APP_KEY}` +
+          `&waypoint0=geo!33.8502113,-117.5762967` +
+          `&waypoint1=geo!33.9169288,-117.5692121` +
+          `&mode=fastest;car;traffic:enabled`
+        );
+        let body = (await response.json()).response;
+        let route = body.route[0];
+        document.querySelector('#norco-travel-time').innerText = Math.ceil(route.summary.trafficTime / 60);
+        
+        
+        response = await fetch(
+          `https://route.api.here.com/routing/7.2/calculateroute.json` +
+          `?app_id=${HERE_APP_ID}` +
+          `&app_code=${HERE_APP_KEY}` +
+          `&waypoint0=geo!33.8502113,-117.5762967` +
+          `&waypoint1=geo!33.9714889,-117.3808994` +
+          `&mode=fastest;car;traffic:enabled`
+        );
+        body = (await response.json()).response;
+        route = body.route[0];
+        document.querySelector('#rcc-travel-time').innerText = Math.ceil(route.summary.trafficTime / 60);
+      }
+      
+      async function newsFetch() {
+        let response = await fetch('https://api.reddit.com/r/news/hot');
+        let body = (await response.json()).data;
+        
+        for (let i = 0; i < 3; i++) {
+          document.querySelector(`#news-title-${i + 1}`).innerText = body.children[i].data.title;
+          document.querySelector(`#news-domain-${i + 1}`).innerText = body.children[i].data.domain;
+        }
+      }
+      
+      async function politicsFetch() {
+        let response = await fetch('https://api.reddit.com/r/politics/hot');
+        let body = (await response.json()).data;
+        
+        for (let i = 0; i < 3; i++) {
+          document.querySelector(`#politics-title-${i + 1}`).innerText = body.children[i].data.title;
+          document.querySelector(`#politics-domain-${i + 1}`).innerText = body.children[i].data.domain;
+        }
+      }
+      
+      async function cryptoFetch() {
+        let response = await fetch(`https://min-api.cryptocompare.com/data/pricemultifull?fsyms=BTC,LTC,ETC,ETH&tsyms=USD&&api_key=${CRYPTOCOMPARE_API_KEY}`);
+        let body = await response.json();
+        
+        console.log(body)
+        
+        let bitcoin = document.querySelector('#bitcoin-price');
+        bitcoin.innerText = body.DISPLAY.BTC.USD.PRICE;
+        if (body.RAW.BTC.USD.CHANGEPCT24HOUR > 0) {
+          bitcoin.style.color = '#90ee90';
+        } else if (body.RAW.BTC.USD.CHANGEPCT24HOUR < 0) {
+          bitcoin.style.color = 'red';
+        } else {
+          bitcoin.style.color = '';
+        }
+        
+        let litecoin = document.querySelector('#litecoin-price');
+        litecoin.innerText = body.DISPLAY.LTC.USD.PRICE;
+        if (body.RAW.LTC.USD.CHANGEPCT24HOUR > 0) {
+          litecoin.style.color = '#90ee90';
+        } else if (body.RAW.LTC.USD.CHANGEPCT24HOUR < 0) {
+          litecoin.style.color = 'red';
+        } else {
+          litecoin.style.color = '';
+        }
+        
+        let ethereumClassic = document.querySelector('#ethereum-classic-price');
+        ethereumClassic.innerText = body.DISPLAY.ETC.USD.PRICE;
+        if (body.RAW.ETC.USD.CHANGEPCT24HOUR > 0) {
+          ethereumClassic.style.color = '#90ee90';
+        } else if (body.RAW.ETC.USD.CHANGEPCT24HOUR < 0) {
+          ethereumClassic.style.color = 'red';
+        } else {
+          ethereumClassic.style.color = '';
+        }
+        
+        let ethereum = document.querySelector('#ethereum-price');
+        ethereum.innerText = body.DISPLAY.ETH.USD.PRICE;
+        if (body.RAW.ETH.USD.CHANGEPCT24HOUR > 0) {
+          ethereum.style.color = '#90ee90';
+        } else if (body.RAW.ETH.USD.CHANGEPCT24HOUR < 0) {
+          ethereum.style.color = 'red';
+        } else {
+          ethereum.style.color = '';
+        }
+      }
+      
+      function dateRefresh() {
+        let date = new Date();
+        document.querySelector('#date-text').innerText = date.toLocaleString('en-us', {weekday: 'long', month: 'long', day: 'numeric', year: 'numeric'});
+        document.querySelector('#time-text').innerText = date.toLocaleString('en-us', {hour: 'numeric', minute: 'numeric', hour12: true});
+      }
+      
+      document.addEventListener("DOMContentLoaded", () => {
+        refresh();
+        setInterval(dateRefresh, 500);
+        setInterval(() => {
+          currentWeatherFetch();
+          forecastWeatherFetch();
+          trafficFetch();
+          newsFetch();
+          politicsFetch();
+          cryptoFetch();
+        }, 60 * 1000 * 5);
+      });
+    </script>
+  </head>
+  <body class="center-align grey darken-4 white-text">
+    <div id="root" class="row">
+      
+      <div class="col s2">
+        <div class="row">
+          
+          <!-- Time Card -->
+          <div class="col s12">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <p class="card-title"><span id="time-text"></span></p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Currrent Weather Card -->
+          <div class="col s12">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <img id="weather-icon" class="responsive-img"/>
+                <p id="weather-text"></p>
+                <p class="card-title"><span id="weather-temperature"></span>°F</p>
+                <hr/>
+                <p><span id="weather-high"></span>°F/<span id="weather-low"></span>°F</p>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <div class="col s5">
+        <div class="row">
+          
+          <!-- Date Card -->
+          <div class="col s12">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <p class="card-title"><span id="date-text"></span></p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- 5 Day Weather Card -->
+          <div class="col s12">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <div class="row">
+                  <div class="col s3">
+                    <img id="forecast-icon-1" class="responsive-img"/>
+                    <p id="forecast-day-1" class="card-title"></p>
+                    <p id="forecast-text-1"></p>
+                    <p><span id="forecast-high-1"></span>°F/<span id="forecast-low-1"></span>°F</p>
+                  </div>
+                  <div class="col s3">
+                    <img id="forecast-icon-2" class="responsive-img"/>
+                    <p id="forecast-day-2" class="card-title"></p>
+                    <p id="forecast-text-2"></p>
+                    <p><span id="forecast-high-2"></span>°F/<span id="forecast-low-2"></span>°F</p>
+                  </div>
+                  <div class="col s3">
+                    <img id="forecast-icon-3" class="responsive-img"/>
+                    <p id="forecast-day-3" class="card-title"></p>
+                    <p id="forecast-text-3"></p>
+                    <p><span id="forecast-high-3"></span>°F/<span id="forecast-low-3"></span>°F</p>
+                  </div>
+                  <div class="col s3">
+                    <img id="forecast-icon-4" class="responsive-img"/>
+                    <p id="forecast-day-4" class="card-title"></p>
+                    <p id="forecast-text-4"></p>
+                    <p><span id="forecast-high-4"></span>°F/<span id="forecast-low-4"></span>°F</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Traffic Cards -->
+          <div class="col s6">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <p class="card-title"><span id="norco-travel-time"></span> minutes</p>
+                <p>Norco College</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col s6">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <p class="card-title"><span id="rcc-travel-time"></span> minutes</p>
+                <p>Riverside City College</p>
+              </div>
+            </div>
+          </div>
+          
+          <div class="col s12">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <div class="row">
+                  <div class="col s3">
+                    <img class="responsive-img" style="width: 50%;" src="assets/crypto/bitcoin.png"/>
+                    <p id="bitcoin-price" class="card-title"></p>
+                  </div>
+                  <div class="col s3">
+                    <img class="responsive-img" style="width: 50%;" src="assets/crypto/litecoin.png"/>
+                    <p id="litecoin-price" class="card-title"></p>
+                  </div>
+                  <div class="col s3">
+                    <img class="responsive-img" style="width: 50%;" src="assets/crypto/ethereum-classic.png"/>
+                    <p id="ethereum-classic-price" class="card-title"></p>
+                  </div>
+                  <div class="col s3">
+                    <img class="responsive-img" style="width: 50%;" src="assets/crypto/ethereum.png"/>
+                    <p id="ethereum-price" class="card-title"></p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+      
+      <div class="col s5">
+        <div class="row">
+          
+          <!-- r/news Card -->
+          <div class="col s12 left-align">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <div class="row">
+                  <p>
+                    <span id="news-title-1"></span>
+                    <span class="grey-text"> (<span id="news-domain-1"></span>)</span>
+                  </p>
+                </div>
+                <hr/>
+                <div class="row">
+                  <p>
+                    <span id="news-title-2"></span>
+                    <span class="grey-text right-align"> (<span id="news-domain-2"></span>)</span>
+                  </p>
+                </div>
+                <hr/>
+                <div class="row">
+                  <p>
+                    <span id="news-title-3"></span>
+                    <span class="grey-text right-align"> (<span id="news-domain-3"></span>)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- r/politics Card -->
+          <div class="col s12 left-align">
+            <div class="card grey darken-3">
+              <div class="card-content">
+                <div class="row">
+                  <p>
+                    <span id="politics-title-1"></span>
+                    <span class="grey-text"> (<span id="politics-domain-1"></span>)</span>
+                  </p>
+                </div>
+                <hr/>
+                <div class="row">
+                  <p>
+                    <span id="politics-title-2"></span>
+                    <span class="grey-text right-align"> (<span id="politics-domain-2"></span>)</span>
+                  </p>
+                </div>
+                <hr/>
+                <div class="row">
+                  <p>
+                    <span id="politics-title-3"></span>
+                    <span class="grey-text right-align"> (<span id="politics-domain-3"></span>)</span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
